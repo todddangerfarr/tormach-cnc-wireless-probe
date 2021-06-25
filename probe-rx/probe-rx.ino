@@ -36,6 +36,7 @@ RH_RF69 rf69(RFM69_CS, RFM69_INT);
 RHReliableDatagram rf69_manager(rf69, MY_ADDRESS);
 
 int16_t packetnum = 0;
+int probeConnected = 1; 
 const int outputPin = 6; 
 
 
@@ -87,7 +88,6 @@ void setup() {
 
 /************ LOOP *********************/
 void loop() {
-  // put your main code here, to run repeatedly:
   if (rf69.available()) {
     // Should be a message for us now   
     uint8_t buf[RH_RF69_MAX_MESSAGE_LEN];
@@ -95,24 +95,25 @@ void loop() {
     if (rf69.recv(buf, &len)) {
       if (!len) return;
       buf[len] = 0;
-      Serial.print("Received [");
-      Serial.print(len);
-      Serial.print("]: ");
+
+      // IF PROBE IS ON, BRING OUTPUT LOW
+      if (buf[0] == 48) {
+        digitalWrite(outputPin, LOW);
+      } else if (buf[0] == 49) {
+        digitalWrite(outputPin, HIGH);
+      }
+      
       Serial.println((char*)buf);
       Serial.print("RSSI: ");
       Serial.println(rf69.lastRssi(), DEC);
+      delay(10);
 
-      if (strstr((char *)buf, "Hello World")) {
-        // Send a reply!
-        uint8_t data[] = "And hello back to you";
-        rf69.send(data, sizeof(data));
-        rf69.waitPacketSent();
-        Serial.println("Sent a reply");
-      }
     } else {
       Serial.println("Receive failed");
       display.println("Nothing");
       display.display();
     }
+  } else {
+    Serial.println("Probe Not Found");
   }
 }
