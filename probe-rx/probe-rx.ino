@@ -37,7 +37,12 @@ RHReliableDatagram rf69_manager(rf69, MY_ADDRESS);
 
 int16_t packetnum = 0;
 int probeConnected = 1; 
+bool itsBeenAWhile = false;
 const int outputPin = 6; 
+unsigned long refTime;
+unsigned long curTime; 
+String batteryInfo;
+int numLoops = 0;
 
 
 /************ SETUP *********************/
@@ -51,6 +56,13 @@ void setup() {
   delay(3000); // Show Splash Screen
   display.clearDisplay();
   display.display();
+
+  display.setRotation(1);
+  display.setTextSize(1);
+  display.setTextColor(SH110X_WHITE, SH110X_BLACK);
+  display.setCursor(0,0);
+  display.print("Looking for Probe...");
+  display.display(); // actually display all of the above
 
   pinMode(LED, OUTPUT);     
   pinMode(RFM69_RST, OUTPUT);
@@ -88,6 +100,8 @@ void setup() {
 
 /************ LOOP *********************/
 void loop() {
+  delay(5);
+  refTime = millis();
   if (rf69.available()) {
     // Should be a message for us now   
     uint8_t buf[RH_RF69_MAX_MESSAGE_LEN];
@@ -102,18 +116,50 @@ void loop() {
       } else if (buf[0] == 49) {
         digitalWrite(outputPin, HIGH);
       }
-      
-      Serial.println((char*)buf);
-      Serial.print("RSSI: ");
-      Serial.println(rf69.lastRssi(), DEC);
-      delay(10);
+
+      // BATTERY INFORMATION 
+      if (buf[1] == 48) {
+        batteryInfo = "Battery: Low";
+      } else if (buf[0] == 49) {
+        batteryInfo = "Battery: OK!";
+      }
+
+      // Update display every 1000 ms (each loop is 5ms)
+      if ((numLoops > 100) || (numLoops == 0)) {
+        display.setCursor(0, 0);
+        display.println("FARR FRAMEWORKS      ");
+        display.println("                     ");
+        display.println("                     ");
+        display.println("Probe Connected!     ");
+        display.println(batteryInfo);
+        display.print("RSSI:"); display.println(rf69.lastRssi());
+        display.display();
+        numLoops = 1;
+      }
+      numLoops ++; 
+      delay(5);
 
     } else {
       Serial.println("Receive failed");
-      display.println("Nothing");
-      display.display();
     }
+  } 
+
+  // Time out probe comms haven't happened in a while
+  curTime = millis();
+  if ((curTime - refTime) > 2000) {
+    itsBeenAWhile = true;
   } else {
-    Serial.println("Probe Not Found");
+    itsBeenAWhile = false; 
+  }
+  if (itsBeenAWhile) {
+    digitalWrite(outputPin, HIGH);
+    display.clearDisplay(); 
+    display.setCursor(0, 0);
+    display.println("FARR FRAMEWORKS      ");
+    display.println("                     ");
+    display.println("ET Probe Home?");
+    display.print("Check Connection."); 
+    display.display();
+    delay(300); 
   }
 }
