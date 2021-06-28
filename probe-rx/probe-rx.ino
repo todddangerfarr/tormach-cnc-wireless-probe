@@ -112,9 +112,9 @@ void loop() {
 
       // IF PROBE IS ON, BRING OUTPUT LOW
       if (buf[0] == 48) {
-        digitalWrite(outputPin, LOW);
-      } else if (buf[0] == 49) {
         digitalWrite(outputPin, HIGH);
+      } else if (buf[0] == 49) {
+        digitalWrite(outputPin, LOW);
       }
 
       // BATTERY INFORMATION 
